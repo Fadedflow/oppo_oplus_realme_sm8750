@@ -138,12 +138,9 @@ jobs:
           
           wait
           echo "所有源码及llvm-Clang18工具链初始化完成！"
-          echo "正在去除 ABI 保护 & 去除 dirty 后缀..."
+          echo "正在去除 ABI 保护..."
           rm common/android/abi_gki_protected_exports_* || true
-          for f in common/scripts/setlocalversion; do
-            sed -i 's/ -dirty//g' "$f"
-            sed -i '$i res=$(echo "$res" | sed '\''s/-dirty//g'\'')' "$f"
-          done
+          # 注：一加树时代这里还往 setlocalversion 里插 $res 相关逻辑，纯 GKI 的 setlocalversion 没有 $res 变量，已移除
 
       - name: 配置ccache目录
         run: |
@@ -462,9 +459,7 @@ jobs:
             # 应用 Droidspaces 容器必须补丁
             wget https://github.com/$GITHUB_REPOSITORY/raw/refs/heads/$GITHUB_REF_NAME/droidspaces_patch/fix_sysvipc_kabi_6_7_8.patch
             patch -p1 -F 3 < fix_sysvipc_kabi_6_7_8.patch || true
-            # 修补 oplus_bsp_midas 行为，避免开机崩溃
-            wget https://github.com/$GITHUB_REPOSITORY/raw/refs/heads/$GITHUB_REF_NAME/droidspaces_patch/fix_oplus_bsp_midas.patch
-            patch -p1 -F 3 < fix_oplus_bsp_midas.patch || true
+            # 注：fix_oplus_bsp_midas.patch 是一加树专属（oplus_bsp_midas 驱动），纯 GKI 上无此代码，已移除
             # 应用 NTSync 补丁
             wget https://github.com/$GITHUB_REPOSITORY/raw/refs/heads/$GITHUB_REF_NAME/droidspaces_patch/ntsync_base.patch
             wget https://github.com/$GITHUB_REPOSITORY/raw/refs/heads/$GITHUB_REF_NAME/droidspaces_patch/ntsync_compat_${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
@@ -516,20 +511,17 @@ jobs:
         run: |
           cd kernel_workspace
           echo "替换内核版本后缀..."
+          # 纯 GKI 的 scripts/setlocalversion 末行是 echo "${KERNELVERSION}..."，
+          # 原先按一加树 echo "$res" 写的匹配 pattern 在纯 GKI 上命中不到，改为整行替换
           if [[ -n "${{ github.event.inputs.kernel_suffix }}" ]]; then
-            echo "当前内核版本后缀：${{ github.event.inputs.kernel_suffix }}"
-            for f in ./common/scripts/setlocalversion; do
-              sed -i "\$s|echo \"\\\$res\"|echo \"-${{ github.event.inputs.kernel_suffix }}\"|" "$f"
-            done
-            sudo sed -i 's/-4k/-${{ github.event.inputs.KERNEL_SUFFIX }}/g' ./common/arch/arm64/configs/gki_defconfig
+            KSUFFIX="${{ github.event.inputs.kernel_suffix }}"
           else
-            echo "当前内核版本后缀：${{ env.KERNEL_NAME }}"
-            for f in ./common/scripts/setlocalversion; do
-              sed -i "\$s|echo \"\\\$res\"|echo \"-${{ env.KERNEL_NAME }}\"|" "$f"
-            done
-            sudo sed -i 's/-4k/-${{ env.KERNEL_NAME }}/g' ./common/arch/arm64/configs/gki_defconfig
+            KSUFFIX="${{ env.KERNEL_NAME }}"
           fi
-          sed -i 's/${scm_version}//' ./common/scripts/setlocalversion
+          echo "当前内核版本后缀：$KSUFFIX"
+          sed -i '$s|.*|echo "${KERNELVERSION}-'"$KSUFFIX"'"|' ./common/scripts/setlocalversion
+          echo "setlocalversion 末行已替换为："
+          tail -n 1 ./common/scripts/setlocalversion
           echo "CONFIG_LOCALVERSION_AUTO=n" >> ./common/arch/arm64/configs/gki_defconfig
            
       - name: 构建内核
@@ -743,7 +735,7 @@ jobs:
           TIME_FORM="$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')"
           echo "TIME=$TIME" >> $GITHUB_ENV
           echo "TIME_FORM=$TIME_FORM" >> $GITHUB_ENV
-          TAG_HEAD="OPPO-OPlus-Realme-build"
+          TAG_HEAD="Xiaomi15U-GKI-build"
           echo "TAG_HEAD=$TAG_HEAD" >> $GITHUB_ENV
           if [[ ${{ github.event.inputs.ksu_type }} == "sukisu" ]]; then
             KSU_TYPENAME="SukiSU Ultra"
