@@ -416,6 +416,47 @@ jobs:
           if [[ "${{ github.event.inputs.bbr_enable }}" != "false" ]]; then
             echo "正在添加BBR等拥塞控制算法..."
             cd kernel_workspace
+            # 集成 TCP Brutal 源码（apernet/tcp-brutal，Hysteria 拥塞控制算法的 TCP 移植）
+            # 以内建方式编译，使 CONFIG_TCP_CONG_BRUTAL=y 真正生效（纯 GKI 原生不带 brutal 源码）
+            echo "正在集成 TCP Brutal..."
+            mkdir -p /tmp/tcp-brutal && cd /tmp/tcp-brutal
+            wget -q https://github.com/apernet/tcp-brutal/archive/refs/heads/master.tar.gz -O brutal.tar.gz
+            tar xzf brutal.tar.gz --strip-components=1
+            cp brutal.h brutal_cc.c brutal_sockopt.c brutal_rules.c ../kernel_workspace/common/net/ipv4/
+            cd ../kernel_workspace/common
+            python3 << 'PYEOF'
+            # Kconfig：加 TCP_CONG_BRUTAL 选项
+            with open('net/ipv4/Kconfig') as f:
+                kc = f.read()
+            brutal_kc = 'config TCP_CONG_BRUTAL\n\ttristate "Brutal TCP"\n\tdefault n\n\thelp\n\n\t  TCP Brutal is Hysteria\'s congestion control algorithm ported to TCP.\n'
+            marker = 'choice\n\tprompt "Default TCP congestion control"'
+            if 'config TCP_CONG_BRUTAL' not in kc and marker in kc:
+                kc = kc.replace(marker, brutal_kc + '\n' + marker, 1)
+                with open('net/ipv4/Kconfig', 'w') as f:
+                    f.write(kc)
+                print("Kconfig: TCP_CONG_BRUTAL 已添加")
+            else:
+                print("Kconfig: 已存在或 marker 未找到，跳过")
+            # Makefile：加编译规则
+            with open('net/ipv4/Makefile') as f:
+                mk = f.read()
+            if 'CONFIG_TCP_CONG_BRUTAL' not in mk:
+                old = 'obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o'
+                new = ('obj-$(CONFIG_TCP_CONG_BBR) += tcp_bbr.o\n'
+                       'obj-$(CONFIG_TCP_CONG_BRUTAL) += tcp_brutal.o\n'
+                       'tcp_brutal-objs := brutal_cc.o brutal_sockopt.o brutal_rules.o\n'
+                       'CFLAGS_brutal_cc.o := -std=gnu99\n'
+                       'CFLAGS_brutal_sockopt.o := -std=gnu99\n'
+                       'CFLAGS_brutal_rules.o := -std=gnu99')
+                assert old in mk, "Makefile marker not found"
+                mk = mk.replace(old, new, 1)
+                with open('net/ipv4/Makefile', 'w') as f:
+                    f.write(mk)
+                print("Makefile: tcp_brutal 已添加")
+            else:
+                print("Makefile: 已存在，跳过")
+            PYEOF
+            cd ../kernel_workspace
             #开启TCP拥塞控制算法控制器（必需）
             echo "CONFIG_TCP_CONG_ADVANCED=y" >> ./common/arch/arm64/configs/gki_defconfig
             ################################################################################################################################
