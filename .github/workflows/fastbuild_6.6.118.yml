@@ -470,6 +470,19 @@ jobs:
           patch -p1 --forward < /tmp/unicode_fix.patch || echo "Unicode 补丁已应用或无需应用"
           cd ..
 
+      - name: 启用 BTF 以对齐符号 CRC（兼容官方 vendor 模块）
+        run: |
+          cd kernel_workspace
+          echo "正在启用 BTF..."
+          # BTF 使导出符号 CRC 与官方内核对齐，确保 vendor_dlkm/system_dlkm 可加载
+          # 必须关闭压缩 DWARF，否则 pahole 无法处理
+          echo "CONFIG_DEBUG_INFO_BTF=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_DEBUG_INFO_COMPRESSED=n" >> ./common/arch/arm64/configs/gki_defconfig
+          # 确保 pahole 可用
+          which pahole || (sudo apt-get update -qq && sudo apt-get install -y -qq dwarves)
+          pahole --version
+          cd ..
+
       - name: 启用 Droidspaces 容器支持
         run: |
           if [[ "${{ github.event.inputs.droidspaces_enable }}" != "false" ]]; then
