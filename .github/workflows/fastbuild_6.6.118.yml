@@ -466,7 +466,7 @@ jobs:
         run: |
           cd kernel_workspace/common
           echo "正在应用 Unicode 修复补丁..."
-          wget -q https://raw.githubusercontent.com/WildKernels/kernel_patches/main/common/unicode_bypass_fix_6.1+.patch -O /tmp/unicode_fix.patch
+          wget -q https://raw.githubusercontent.com/WildKernels/kernel_patches/main/common/unicode_bypass_fix_6.1%2B.patch -O /tmp/unicode_fix.patch
           patch -p1 --forward < /tmp/unicode_fix.patch || echo "Unicode 补丁已应用或无需应用"
           cd ..
 
