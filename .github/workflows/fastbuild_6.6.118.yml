@@ -470,23 +470,6 @@ jobs:
           patch -p1 --forward < /tmp/unicode_fix.patch || echo "Unicode 补丁已应用或无需应用"
           cd ..
 
-      - name: 集成 Baseband Guard（基带保护）
-        run: |
-          cd kernel_workspace
-          echo "正在集成 Baseband Guard..."
-          # 从 vc-teahouse/Baseband-guard 获取源码（pin 到当前 main，避免上游漂移）
-          git clone --depth=1 https://github.com/vc-teahouse/Baseband-guard.git Baseband-guard
-          BBG_COMMIT=$(cd Baseband-guard && git rev-parse --short HEAD)
-          echo "BBG commit: $BBG_COMMIT"
-          # 按官方 setup.sh 逻辑手动集成（不直接 curl|bash）
-          ln -sf ../Baseband-guard common/security/baseband-guard
-          grep -q "baseband-guard" common/security/Makefile || echo "obj-\$(CONFIG_BBG) += baseband-guard/" >> common/security/Makefile
-          grep -q "security/baseband-guard/Kconfig" common/security/Kconfig || echo 'source "security/baseband-guard/Kconfig"' >> common/security/Kconfig
-          # 加入 LSM 默认列表
-          sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' common/security/Kconfig
-          echo "CONFIG_BBG=y" >> ./common/arch/arm64/configs/gki_defconfig
-          echo "Baseband Guard 集成完成"
-
       - name: 启用 Droidspaces 容器支持
         run: |
           if [[ "${{ github.event.inputs.droidspaces_enable }}" != "false" ]]; then
