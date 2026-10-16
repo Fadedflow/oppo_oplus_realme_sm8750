@@ -419,13 +419,14 @@ jobs:
             # 集成 TCP Brutal 源码（apernet/tcp-brutal，Hysteria 拥塞控制算法的 TCP 移植）
             # 以内建方式编译，使 CONFIG_TCP_CONG_BRUTAL=y 真正生效（纯 GKI 原生不带 brutal 源码）
             echo "正在集成 TCP Brutal..."
+            KW="$PWD"
             mkdir -p /tmp/tcp-brutal && cd /tmp/tcp-brutal
             wget -q https://github.com/apernet/tcp-brutal/archive/refs/heads/master.tar.gz -O brutal.tar.gz
             tar xzf brutal.tar.gz --strip-components=1
-            cp brutal.h brutal_cc.c brutal_sockopt.c brutal_rules.c ../kernel_workspace/common/net/ipv4/
-            cd ../kernel_workspace/common
+            cp brutal.h brutal_cc.c brutal_sockopt.c brutal_rules.c "$KW/common/net/ipv4/"
+            cd "$KW/common"
             echo "d2l0aCBvcGVuKCduZXQvaXB2NC9LY29uZmlnJykgYXMgZjoKICAgIGtjID0gZi5yZWFkKCkKYnJ1dGFsX2tjID0gJ2NvbmZpZyBUQ1BfQ09OR19CUlVUQUxcblx0dHJpc3RhdGUgIkJydXRhbCBUQ1AiXG5cdGRlZmF1bHQgblxuXHRoZWxwXG5cblx0ICBUQ1AgQnJ1dGFsIGNvbmdlc3Rpb24gY29udHJvbCwgcG9ydGVkIGZyb20gSHlzdGVyaWEuXG4nCm1hcmtlciA9ICdjaG9pY2Vcblx0cHJvbXB0ICJEZWZhdWx0IFRDUCBjb25nZXN0aW9uIGNvbnRyb2wiJwppZiAnY29uZmlnIFRDUF9DT05HX0JSVVRBTCcgbm90IGluIGtjIGFuZCBtYXJrZXIgaW4ga2M6CiAgICBrYyA9IGtjLnJlcGxhY2UobWFya2VyLCBicnV0YWxfa2MgKyAnXG4nICsgbWFya2VyLCAxKQogICAgd2l0aCBvcGVuKCduZXQvaXB2NC9LY29uZmlnJywgJ3cnKSBhcyBmOgogICAgICAgIGYud3JpdGUoa2MpCiAgICBwcmludCgnS2NvbmZpZzogVENQX0NPTkdfQlJVVEFMIGFkZGVkJykKd2l0aCBvcGVuKCduZXQvaXB2NC9NYWtlZmlsZScpIGFzIGY6CiAgICBtayA9IGYucmVhZCgpCmlmICdDT05GSUdfVENQX0NPTkdfQlJVVEFMJyBub3QgaW4gbWs6CiAgICBvbGQgPSAnb2JqLSQoQ09ORklHX1RDUF9DT05HX0JCUikgKz0gdGNwX2Jici5vJwogICAgbmV3ID0gb2xkICsgJ1xub2JqLSQoQ09ORklHX1RDUF9DT05HX0JSVVRBTCkgKz0gdGNwX2JydXRhbC5vXG50Y3BfYnJ1dGFsLW9ianMgOj0gYnJ1dGFsX2NjLm8gYnJ1dGFsX3NvY2tvcHQubyBicnV0YWxfcnVsZXMub1xuQ0ZMQUdTX2JydXRhbF9jYy5vIDo9IC1zdGQ9Z251OTlcbkNGTEFHU19icnV0YWxfc29ja29wdC5vIDo9IC1zdGQ9Z251OTlcbkNGTEFHU19icnV0YWxfcnVsZXMubyA6PSAtc3RkPWdudTk5JwogICAgYXNzZXJ0IG9sZCBpbiBtawogICAgbWsgPSBtay5yZXBsYWNlKG9sZCwgbmV3LCAxKQogICAgd2l0aCBvcGVuKCduZXQvaXB2NC9NYWtlZmlsZScsICd3JykgYXMgZjoKICAgICAgICBmLndyaXRlKG1rKQogICAgcHJpbnQoJ01ha2VmaWxlOiB0Y3BfYnJ1dGFsIGFkZGVkJykK" | base64 -d | python3
-            cd ../kernel_workspace
+            cd "$KW"
             #开启TCP拥塞控制算法控制器（必需）
             echo "CONFIG_TCP_CONG_ADVANCED=y" >> ./common/arch/arm64/configs/gki_defconfig
             ################################################################################################################################
